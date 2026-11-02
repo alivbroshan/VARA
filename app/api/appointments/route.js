@@ -123,6 +123,19 @@ export async function POST(request) {
       INSERT INTO appointments (doctor_id, patient_name, patient_phone, date, time, tracking_code, status)
       VALUES (?, ?, ?, ?, ?, ?, 'confirmed')
     `);
+    // دریافت نام پزشک جهت نمایش در اعلان
+    let docName = "پزشک کلینیک";
+    try {
+      const doc = db.prepare("SELECT name FROM doctors WHERE id = ?").get(doctorId);
+      if (doc) docName = doc.name;
+
+      // ثبت اعلان جدید برای ادمین
+      db.prepare(
+        "INSERT INTO notifications (tracking_code, patient_name, doctor_name, date, time, is_read) VALUES (?, ?, ?, ?, ?, 0)"
+      ).run(trackingCode, patientName.trim(), docName, date, time);
+    } catch (notifErr) {
+      console.error("Notification trigger error:", notifErr);
+    }
 
     const result = stmt.run(docIdNum, patientName, patientPhone, date, time, trackingCode);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 
 function gregorianToJalali(gy, gm, gd) {
@@ -119,23 +119,90 @@ const PRESET_SPECIALTIES = [
   "جراح و متخصص چشم‌پزشکی",
 ];
 
+const STATUS_OPTIONS = [
+  { value: "confirmed", label: "در انتظار پذیرش", color: "bg-amber-500" },
+  { value: "admitted", label: "پذیرش در کلینیک", color: "bg-blue-500" },
+  { value: "completed", label: "ویزیت تکمیل شد", color: "bg-emerald-500" },
+  { value: "no_show", label: "غیبت بیمار (No-Show)", color: "bg-purple-500" },
+  { value: "cancelled_by_clinic", label: "لغو از کلینیک", color: "bg-rose-500" },
+  { value: "cancelled_by_patient", label: "لغو توسط بیمار", color: "bg-zinc-400" },
+];
+
 function renderAdminStatusBadge(status) {
   switch (status) {
     case "completed":
-      return <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-800/60">ویزیت شد</span>;
+      return <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/60">ویزیت شد</span>;
     case "admitted":
-      return <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-950/60 text-blue-300 border border-blue-800/60">پذیرش‌شده در کلینیک</span>;
+      return <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300 dark:border-blue-800/60">پذیرش در کلینیک</span>;
     case "no_show":
-      return <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-950/60 text-purple-300 border border-purple-800/60">غیبت بیمار (No-Show)</span>;
+      return <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-300 dark:border-purple-800/60">غیبت بیمار</span>;
     case "cancelled_by_clinic":
-      return <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-950/60 text-rose-300 border border-rose-800/60">لغو از طرف کلینیک</span>;
+      return <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60">لغو از کلینیک</span>;
     case "cancelled_by_patient":
     case "cancelled":
-      return <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-zinc-900 text-zinc-400 border border-zinc-800">لغو توسط بیمار</span>;
+      return <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-zinc-200 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-800">لغو توسط بیمار</span>;
     case "confirmed":
     default:
-      return <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-950/60 text-amber-300 border border-amber-800/60">در انتظار پذیرش</span>;
+      return <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800/60">در انتظار پذیرش</span>;
   }
+}
+
+function CustomStatusDropdown({ currentStatus, onSelect }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const activeOption = STATUS_OPTIONS.find((o) => o.value === currentStatus) || STATUS_OPTIONS[0];
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative inline-block text-right" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between gap-2.5 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/90 py-1.5 px-3 text-[11px] font-bold text-slate-800 dark:text-zinc-200 shadow-sm hover:border-rose-500/60 transition min-w-[145px]"
+      >
+        <span className="flex items-center gap-1.5">
+          <span className={`h-2 w-2 rounded-full ${activeOption.color}`} />
+          {activeOption.label}
+        </span>
+        <svg className={`w-3.5 h-3.5 text-rose-500 transition-transform ${isOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 z-50 mt-1.5 w-44 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#0c0f17] p-1.5 shadow-2xl backdrop-blur-xl">
+          {STATUS_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onSelect(opt.value);
+                setIsOpen(false);
+              }}
+              className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-[11px] font-bold transition ${
+                currentStatus === opt.value
+                  ? "bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400"
+                  : "text-slate-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+              }`}
+            >
+              <span className={`h-2 w-2 rounded-full ${opt.color}`} />
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function AdminDashboard() {
@@ -144,23 +211,29 @@ export default function AdminDashboard() {
   const [doctors, setDoctors] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // سیستم مدیریت اعلان‌ها
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [toastNotification, setToastNotification] = useState(null);
+  const notifDropdownRef = useRef(null);
+  const lastKnownNotifIdRef = useRef(null);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // فیلتر تقویم شمسی برای ادمین
   const todaySh = useMemo(() => {
     const now = new Date();
     return gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
   }, []);
 
-  const [filterMode, setFilterMode] = useState("all"); // "all" | "today" | "custom_shamsi"
+  const [filterMode, setFilterMode] = useState("all");
   const [adminYear, setAdminYear] = useState(todaySh[0]);
   const [adminMonth, setAdminMonth] = useState(todaySh[1]);
   const [adminDay, setAdminDay] = useState(todaySh[2]);
 
   const [actionMessage, setActionMessage] = useState(null);
 
-  // پزشکان
   const [newDocName, setNewDocName] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState(PRESET_SPECIALTIES[0]);
   const [customSpecialty, setCustomSpecialty] = useState("");
@@ -168,6 +241,19 @@ export default function AdminDashboard() {
   const [newDocEnd, setNewDocEnd] = useState(17);
   const [newDocDays, setNewDocDays] = useState("شنبه تا چهارشنبه");
   const [editingDoctor, setEditingDoctor] = useState(null);
+
+  useEffect(() => {
+    const syncTheme = () => {
+      if (localStorage.getItem("varadoc_theme") === "light") {
+        document.body.classList.add("light-theme");
+      } else {
+        document.body.classList.remove("light-theme");
+      }
+    };
+    syncTheme();
+    window.addEventListener("storage", syncTheme);
+    return () => window.removeEventListener("storage", syncTheme);
+  }, []);
 
   const fetchAppointments = async () => {
     try {
@@ -189,15 +275,65 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch("/api/notifications");
+      const data = await res.json();
+      if (res.ok) {
+        const notifs = data.notifications || [];
+        setNotifications(notifs);
+        setUnreadNotifCount(data.unreadCount || 0);
+
+        if (notifs.length > 0) {
+          const newest = notifs[0];
+          if (lastKnownNotifIdRef.current !== null && newest.id > lastKnownNotifIdRef.current) {
+            setToastNotification(newest);
+            fetchAppointments();
+            setTimeout(() => setToastNotification(null), 6000);
+          }
+          lastKnownNotifIdRef.current = newest.id;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch notifications:", e);
+    }
+  };
+
   const refreshAll = async () => {
     setIsLoading(true);
-    await Promise.all([fetchAppointments(), fetchDoctors()]);
+    await Promise.all([fetchAppointments(), fetchDoctors(), fetchNotifications()]);
     setIsLoading(false);
   };
 
   useEffect(() => {
     refreshAll();
+    const interval = setInterval(fetchNotifications, 4000);
+    return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(e.target)) {
+        setIsNotifOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleMarkAllNotifsRead = async () => {
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAllAsRead: true }),
+      });
+      setUnreadNotifCount(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleUpdateStatus = async (trackingCode, newStatus) => {
     try {
@@ -292,7 +428,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // محاسبه تاریخ میلادی فیلتر شمسی ادمین
   const adminTargetIso = useMemo(() => {
     if (filterMode === "today") {
       const now = new Date();
@@ -339,11 +474,37 @@ export default function AdminDashboard() {
   }, [appointments, todayIso]);
 
   return (
-    <main dir="rtl" className="min-h-screen bg-[#07090e] font-sans text-zinc-100 antialiased selection:bg-rose-500 selection:text-white relative overflow-hidden">
-      {/* مشبک و شفق نوری چرخان تم اصلی */}
+    <main dir="rtl" className="min-h-screen bg-[#07090e] font-sans text-zinc-100 antialiased selection:bg-rose-500 selection:text-white relative overflow-hidden transition-colors duration-300">
       <div className="pointer-events-none absolute inset-0 mindoo-grid-bg opacity-70 z-0" />
       <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-gradient-to-tr from-rose-600/20 via-pink-500/10 to-violet-600/20 blur-[130px] rounded-full aurora-glow z-0" />
 
+      {/* پیام شناور (Toast) نوتیفیکیشن لحظه‌ای */}
+      {toastNotification && (
+        <div className="fixed top-20 left-6 z-50 animate-bounce max-w-sm rounded-2xl bg-zinc-900 border border-rose-500/60 p-4 shadow-2xl shadow-rose-950/60 backdrop-blur-2xl text-right">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="flex h-3 w-3 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+              </span>
+              <span className="text-xs font-black text-rose-400">نوبت جدید ثبت شد!</span>
+            </div>
+            <button onClick={() => setToastNotification(null)} className="text-zinc-500 hover:text-white text-xs">✕</button>
+          </div>
+          <p className="text-xs font-bold text-white mt-1.5">
+            بیمار: <strong className="text-rose-300">{toastNotification.patient_name}</strong>
+          </p>
+          <p className="text-[11px] text-zinc-400 mt-0.5">
+            پزشک: {toastNotification.doctor_name} | ساعت {toastNotification.time}
+          </p>
+          <div className="mt-2 pt-2 border-t border-zinc-800 flex justify-between items-center text-[10px] text-zinc-500">
+            <span className="font-mono text-rose-400">{toastNotification.tracking_code}</span>
+            <span>همین الان</span>
+          </div>
+        </div>
+      )}
+
+      {/* هدر پنل ادمین */}
       <header className="sticky top-0 z-40 border-b border-zinc-800/60 bg-[#07090e]/75 backdrop-blur-2xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
@@ -357,6 +518,69 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* زنگوله اعلان با پاپ‌آپ کشویی */}
+            <div className="relative" ref={notifDropdownRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsNotifOpen(!isNotifOpen);
+                  if (unreadNotifCount > 0) handleMarkAllNotifsRead();
+                }}
+                className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:text-white hover:border-zinc-700 transition shadow-sm active:scale-95"
+                title="اعلان نوبت‌های جدید"
+              >
+                <svg className="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+
+                {unreadNotifCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-[9px] font-black text-white shadow-lg animate-pulse">
+                    {unreadNotifCount}
+                  </span>
+                )}
+              </button>
+
+              {isNotifOpen && (
+                <div className="absolute left-0 mt-2 w-80 rounded-2xl border border-zinc-800 bg-[#0c0f17]/95 p-3 shadow-2xl backdrop-blur-2xl z-50">
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-2 mb-2">
+                    <span className="text-xs font-black text-white">اعلان‌های نوبت‌دهی آنلاین</span>
+                    <button
+                      onClick={handleMarkAllNotifsRead}
+                      className="text-[10px] text-rose-400 hover:underline font-bold"
+                    >
+                      خواندن همه
+                    </button>
+                  </div>
+
+                  <div className="max-h-72 overflow-y-auto space-y-2">
+                    {notifications.length === 0 ? (
+                      <p className="text-center py-6 text-xs text-zinc-500 font-bold">هیچ اعلانی ثبت نشده است.</p>
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          className={`rounded-xl p-2.5 border transition text-right text-xs ${
+                            n.is_read
+                              ? "bg-zinc-950/40 border-zinc-800/60 text-zinc-400"
+                              : "bg-rose-950/20 border-rose-800/50 text-zinc-200"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-white">{n.patient_name}</span>
+                            <span className="font-mono text-[10px] text-rose-400 font-bold">{n.tracking_code}</span>
+                          </div>
+                          <p className="text-[11px] text-zinc-400 mt-1">
+                            ویزیت با: {n.doctor_name} | ساعت: {n.time}
+                          </p>
+                          <span className="text-[9px] text-zinc-500 block mt-1">{toShamsiShort(n.date)}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={refreshAll}
               className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-3.5 py-2 text-xs font-bold text-zinc-300 hover:text-white hover:border-zinc-700 transition shadow-sm"
@@ -424,11 +648,8 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* نوار جستجو و تنظیم تقویم شمسی برای ادمین */}
             <div className="rounded-3xl border border-zinc-800/80 bg-zinc-900/50 p-5 shadow-2xl backdrop-blur-xl mb-6">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                
-                {/* جستجو با کد رهگیری یا نام */}
                 <div className="md:col-span-4">
                   <label className="block text-[11px] font-bold text-zinc-400 mb-1">کد پیگیری، نام یا شماره بیمار</label>
                   <input
@@ -440,7 +661,6 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                {/* فیلتر تاریخ تمام شمسی */}
                 <div className="md:col-span-5">
                   <div className="flex justify-between items-center mb-1">
                     <label className="block text-[11px] font-bold text-zinc-400">تنظیم تاریخ شمسی</label>
@@ -507,7 +727,6 @@ export default function AdminDashboard() {
                   )}
                 </div>
 
-                {/* وضعیت */}
                 <div className="md:col-span-3">
                   <label className="block text-[11px] font-bold text-zinc-400 mb-1">وضعیت نوبت</label>
                   <select
@@ -524,12 +743,11 @@ export default function AdminDashboard() {
                     <option value="cancelled_by_patient">لغو توسط خود بیمار</option>
                   </select>
                 </div>
-
               </div>
             </div>
 
-            <div className="rounded-3xl border border-zinc-800/80 bg-zinc-900/50 overflow-hidden shadow-2xl backdrop-blur-xl">
-              <div className="overflow-x-auto">
+            <div className="rounded-3xl border border-zinc-800/80 bg-zinc-900/50 overflow-visible shadow-2xl backdrop-blur-xl">
+              <div className="overflow-x-auto overflow-y-visible">
                 <table className="w-full text-right text-xs">
                   <thead className="bg-zinc-950/60 border-b border-zinc-800/80 text-zinc-400 font-bold">
                     <tr>
@@ -538,8 +756,8 @@ export default function AdminDashboard() {
                       <th className="py-3.5 px-4">شماره همراه</th>
                       <th className="py-3.5 px-4">پزشک</th>
                       <th className="py-3.5 px-4">تاریخ شمسی و ساعت</th>
-                      <th className="py-3.5 px-4">وضعیت</th>
-                      <th className="py-3.5 px-4 text-left">عملیات باجه</th>
+                      <th className="py-3.5 px-4">وضعیت جاری</th>
+                      <th className="py-3.5 px-4 text-left">تغییر وضعیت نوبت</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/50">
@@ -552,62 +770,28 @@ export default function AdminDashboard() {
                         <td colSpan={7} className="py-12 text-center text-zinc-500 font-bold">هیچ نوبتی با شرایط مشخص‌شده پیدا نشد.</td>
                       </tr>
                     ) : (
-                      filteredAppointments.map((app) => {
-                        const isClosed = app.status === "completed" || app.status === "cancelled_by_clinic" || app.status === "cancelled_by_patient" || app.status === "no_show";
-
-                        return (
-                          <tr key={app.id} className="hover:bg-zinc-800/30 transition">
-                            <td className="py-3.5 px-4 font-mono font-black text-rose-400">{app.tracking_code || `VARA-${app.id}`}</td>
-                            <td className="py-3.5 px-4 font-bold text-white">{app.patient_name}</td>
-                            <td className="py-3.5 px-4 font-mono text-zinc-300">{app.patient_phone}</td>
-                            <td className="py-3.5 px-4">
-                              <span className="font-bold text-zinc-200 block">{app.doctor_name}</span>
-                              <span className="text-[10px] text-zinc-500">{app.doctor_specialty}</span>
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <span className="font-bold text-zinc-200 block">{toShamsiShort(app.date)}</span>
-                              <span className="text-[11px] text-rose-400 font-mono font-bold">{app.time}</span>
-                            </td>
-                            <td className="py-3.5 px-4">{renderAdminStatusBadge(app.status)}</td>
-                            <td className="py-3.5 px-4 text-left">
-                              <div className="flex items-center justify-end gap-1.5">
-                                {app.status !== "admitted" && !isClosed && (
-                                  <button
-                                    onClick={() => handleUpdateStatus(app.tracking_code, "admitted")}
-                                    className="rounded-lg bg-blue-950/60 border border-blue-800/60 px-2.5 py-1 text-[11px] font-bold text-blue-300 hover:bg-blue-900/60 transition"
-                                  >
-                                    پذیرش
-                                  </button>
-                                )}
-                                {!isClosed && (
-                                  <button
-                                    onClick={() => handleUpdateStatus(app.tracking_code, "completed")}
-                                    className="rounded-lg bg-emerald-950/60 border border-emerald-800/60 px-2.5 py-1 text-[11px] font-bold text-emerald-300 hover:bg-emerald-900/60 transition"
-                                  >
-                                    اتمام ویزیت
-                                  </button>
-                                )}
-                                {!isClosed && (
-                                  <button
-                                    onClick={() => handleUpdateStatus(app.tracking_code, "no_show")}
-                                    className="rounded-lg bg-purple-950/60 border border-purple-800/60 px-2.5 py-1 text-[11px] font-bold text-purple-300 hover:bg-purple-900/60 transition"
-                                  >
-                                    عدم حضور
-                                  </button>
-                                )}
-                                {!isClosed && (
-                                  <button
-                                    onClick={() => handleUpdateStatus(app.tracking_code, "cancelled_by_clinic")}
-                                    className="rounded-lg bg-rose-950/60 border border-rose-800/60 px-2.5 py-1 text-[11px] font-bold text-rose-300 hover:bg-rose-900/60 transition"
-                                  >
-                                    لغو
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
+                      filteredAppointments.map((app) => (
+                        <tr key={app.id} className="hover:bg-zinc-800/30 transition">
+                          <td className="py-3.5 px-4 font-mono font-black text-rose-400">{app.tracking_code || `VARA-${app.id}`}</td>
+                          <td className="py-3.5 px-4 font-bold text-white">{app.patient_name}</td>
+                          <td className="py-3.5 px-4 font-mono text-zinc-300">{app.patient_phone}</td>
+                          <td className="py-3.5 px-4">
+                            <span className="font-bold text-zinc-200 block">{app.doctor_name}</span>
+                            <span className="text-[10px] text-zinc-500">{app.doctor_specialty}</span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="font-bold text-zinc-200 block">{toShamsiShort(app.date)}</span>
+                            <span className="text-[11px] text-rose-400 font-mono font-bold">{app.time}</span>
+                          </td>
+                          <td className="py-3.5 px-4">{renderAdminStatusBadge(app.status)}</td>
+                          <td className="py-3.5 px-4 text-left">
+                            <CustomStatusDropdown
+                              currentStatus={app.status || "confirmed"}
+                              onSelect={(newStatus) => handleUpdateStatus(app.tracking_code, newStatus)}
+                            />
+                          </td>
+                        </tr>
+                      ))
                     )}
                   </tbody>
                 </table>
@@ -747,7 +931,7 @@ export default function AdminDashboard() {
                               type="number"
                               value={editingDoctor.end_hour}
                               onChange={(e) => setEditingDoctor({ ...editingDoctor, end_hour: e.target.value })}
-                              className="w-1/2 rounded-xl border border-zinc-800 bg-zinc-950/80 p-2 text-xs font-bold text-zinc-100 text-center font-mono focus:outline-none"
+                              className="w-1/2 rounded-xl border border-zinc-800 bg-zinc-950/80 px-2 py-2 text-xs font-bold text-zinc-100 text-center font-mono focus:outline-none"
                             />
                           </div>
                           <div className="flex gap-2">
@@ -770,25 +954,25 @@ export default function AdminDashboard() {
                           <div>
                             <div className="flex items-center gap-3">
                               <span className="text-sm font-black text-white">{doc.name}</span>
-                              <span className="text-xs font-bold text-rose-300 bg-rose-950/50 px-2.5 py-0.5 rounded-md border border-rose-800/40">
+                              <span className="text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950/60 px-3 py-1 rounded-lg border border-rose-300 dark:border-rose-800/60 shadow-sm">
                                 {doc.specialty}
                               </span>
                             </div>
-                            <p className="text-xs text-zinc-400 mt-1">
+                            <p className="text-xs text-slate-600 dark:text-zinc-400 font-medium mt-1.5">
                               شیفت ویزیت: ساعت {doc.start_hour}:۰۰ الی {doc.end_hour}:۰۰ | {doc.working_days}
                             </p>
                           </div>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2.5">
                             <button
                               onClick={() => setEditingDoctor(doc)}
-                              className="rounded-xl border border-zinc-800 bg-zinc-950/80 px-3.5 py-2 text-xs font-bold text-zinc-300 hover:text-white hover:border-zinc-700 transition"
+                              className="rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/80 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-zinc-300 hover:text-rose-600 dark:hover:text-white hover:border-zinc-400 dark:hover:border-zinc-700 shadow-sm transition"
                             >
                               ویرایش ساعت و شیفت
                             </button>
                             <button
                               onClick={() => handleDeleteDoctor(doc.id, doc.name)}
-                              className="rounded-xl border border-rose-500/30 bg-rose-950/30 px-3.5 py-2 text-xs font-bold text-rose-400 hover:bg-rose-900/40 hover:border-rose-400 transition"
+                              className="rounded-xl border border-rose-300 dark:border-rose-500/40 bg-rose-50 dark:bg-rose-950/40 px-3.5 py-2 text-xs font-bold text-rose-600 dark:text-rose-300 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 dark:hover:text-white shadow-sm transition"
                             >
                               حذف پزشک
                             </button>

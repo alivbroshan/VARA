@@ -1,11 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --font-sans: var(--font-vazir), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-vazir), system-ui, -apple-system, sans-serif;
 }
 
 html {
   font-family: var(--font-sans);
+  font-feature-settings: "ss01" 1, "cv01" 1;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -14,14 +15,291 @@ html {
 
 body {
   font-family: var(--font-sans);
+  font-feature-settings: "ss01" 1;
   background-color: #07090e;
   color: #f8fafc;
   line-height: 1.7;
   letter-spacing: -0.015em;
   overflow-x: hidden;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* عنوان‌ها */
+/* ==========================================================
+   دراپ‌داون‌ها (Select) با ظاهر شیک و مدرن
+   ========================================================== */
+select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f43f5e' stroke-width='2.2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: left 0.75rem center !important;
+  background-size: 14px 14px !important;
+  padding-left: 2.25rem !important;
+  padding-right: 0.85rem !important;
+  border-radius: 0.75rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+select:focus {
+  border-color: #f43f5e !important;
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.18) !important;
+  outline: none !important;
+}
+
+/* پیش‌فرض دارک‌مود برای منوی بازشونده دراپ‌داون */
+body:not(.light-theme) select {
+  background-color: #0b0f19 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+body:not(.light-theme) select option {
+  background-color: #0b0f19 !important;
+  color: #f4f4f5 !important;
+  padding: 8px 12px;
+}
+
+/* ==========================================================
+   پاکسازی کامل تم لایت (Light Theme)
+   ========================================================== */
+body.light-theme {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  color-scheme: light !important; /* اجبار مرورگر به رندر سفید منوی دراپ‌داون */
+}
+
+body.light-theme main {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* حل قطعی مشکل متن‌های سفید در هیرو و صفحات */
+body.light-theme h1,
+body.light-theme h1.text-white,
+body.light-theme h2,
+body.light-theme h2.text-white,
+body.light-theme h3,
+body.light-theme h3.text-white,
+body.light-theme h4,
+body.light-theme span.text-white,
+body.light-theme p.text-white,
+body.light-theme strong.text-white {
+  color: #0f172a !important;
+}
+
+/* حفظ گرادیان کلمه وراداک */
+body.light-theme .bg-clip-text {
+  color: transparent !important;
+}
+
+/* حل قطعی منوی بازشده دراپ‌داون (Select Popup) در حالت لایت */
+body.light-theme select {
+  background-color: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+body.light-theme select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  padding: 8px 12px;
+}
+
+body.light-theme select option:checked {
+  background-color: #ffe4e6 !important;
+  color: #e11d48 !important;
+}
+
+/* هدر در تم روشن و دکمه‌های آن */
+body.light-theme header {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05) !important;
+}
+
+body.light-theme header span.text-white,
+body.light-theme header a.text-white {
+  color: #0f172a !important;
+}
+
+body.light-theme header nav a {
+  color: #475569 !important;
+  font-weight: 600;
+}
+
+body.light-theme header nav a:hover {
+  color: #e11d48 !important;
+}
+
+/* اصلاح دکمه‌های هدر («میز مدیریت»، «خروج»، «پرونده» و دکمه تغییر تم) */
+body.light-theme header a[href="/admin"],
+body.light-theme header a.bg-slate-900,
+body.light-theme header a.bg-zinc-800 {
+  background-color: #f1f5f9 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+body.light-theme header a[href="/portal"] {
+  background-color: #ffe4e6 !important;
+  border: 1.5px solid #f43f5e !important;
+  color: #be123c !important;
+  font-weight: 700 !important;
+}
+
+body.light-theme header button {
+  background-color: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+/* اصلاح رنگ کارت‌ها و کانتینرهای اصلی */
+body.light-theme .bg-zinc-900\/50,
+body.light-theme .bg-zinc-900\/60,
+body.light-theme .bg-zinc-900 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.06) !important;
+}
+
+/* اصلاح کادرهای ورودی و باکس‌های تاریخ */
+body.light-theme .bg-zinc-950\/70,
+body.light-theme .bg-zinc-950\/80,
+body.light-theme .bg-zinc-950\/90,
+body.light-theme .bg-zinc-950 {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+body.light-theme input {
+  background-color: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+body.light-theme input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* کارت‌های آمار بالای پنل ادمین */
+body.light-theme div[class*="bg-rose-950"] {
+  background-color: #fff1f2 !important;
+  border-color: #fecdd3 !important;
+}
+body.light-theme div[class*="bg-rose-950"] span,
+body.light-theme div[class*="bg-rose-950"] p {
+  color: #be123c !important;
+}
+
+body.light-theme div[class*="bg-emerald-950"] {
+  background-color: #f0fdf4 !important;
+  border-color: #bbf7d0 !important;
+}
+body.light-theme div[class*="bg-emerald-950"] span,
+body.light-theme div[class*="bg-emerald-950"] p {
+  color: #15803d !important;
+}
+
+body.light-theme div[class*="bg-purple-950"] {
+  background-color: #faf5ff !important;
+  border-color: #e9d5ff !important;
+}
+body.light-theme div[class*="bg-purple-950"] span,
+body.light-theme div[class*="bg-purple-950"] p {
+  color: #7e22ce !important;
+}
+
+/* رفع کامل تیرگی هدر جدول‌ها */
+body.light-theme thead,
+body.light-theme thead tr,
+body.light-theme th,
+body.light-theme thead[class*="bg-zinc-950"] {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+body.light-theme tbody tr {
+  border-color: #f1f5f9 !important;
+  background-color: #ffffff !important;
+}
+
+body.light-theme tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+body.light-theme td {
+  color: #334155 !important;
+}
+
+/* بج‌های پورتال و ادمین در تم لایت */
+body.light-theme span[class*="bg-zinc-800"],
+body.light-theme span[class*="bg-zinc-900"] {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+/* پیل نشانگر وضعیت هیرو */
+body.light-theme .animate-float {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
+}
+
+/* شبکه مشبک پس‌زمینه */
+body.light-theme .mindoo-grid-bg {
+  background-image: 
+    linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px) !important;
+}
+
+body.light-theme .aurora-glow {
+  opacity: 0.12 !important;
+}
+
+/* دکمه‌های انتخاب ساعت ویزیت */
+body.light-theme button.bg-zinc-950\/70 {
+  background-color: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+body.light-theme button.bg-zinc-950\/70:hover {
+  background-color: #f8fafc !important;
+  border-color: #f43f5e !important;
+  color: #e11d48 !important;
+}
+
+/* بخش بیمه‌ها */
+body.light-theme #insurance-services {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme #insurance-services .bg-zinc-900\/50 {
+  background-color: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+}
+
+/* فوتر */
+body.light-theme footer {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme footer p,
+body.light-theme footer span {
+  color: #64748b !important;
+}
+
+/* ==========================================================
+   استایل‌های عمومی و انیمیشن نوار قلب
+   ========================================================== */
 h1, h2, h3, h4, h5, h6 {
   color: #ffffff;
   font-weight: 700;
@@ -34,37 +312,30 @@ p {
   font-weight: 400;
 }
 
-/* اسکرول‌بار */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: #0f172a;
 }
-
 ::-webkit-scrollbar-thumb {
   background: #334155;
   border-radius: 9999px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
 
-/* چرخش آرام هاله نور پس‌زمینه */
 @keyframes aurora-spin {
   0% { transform: rotate(0deg) scale(1); }
   50% { transform: rotate(180deg) scale(1.15); }
   100% { transform: rotate(360deg) scale(1); }
 }
-
 .aurora-glow {
   animation: aurora-spin 22s linear infinite;
 }
 
-/* مشبک پس‌زمینه */
 .mindoo-grid-bg {
   background-image: 
     linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
@@ -72,40 +343,29 @@ p {
   background-size: 40px 40px;
 }
 
-/* شناور بودن المان‌ها */
 @keyframes subtle-float {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-6px); }
 }
-
 .animate-float {
   animation: subtle-float 5s ease-in-out infinite;
 }
 
-/* --- انیمیشن جریان نامحدود و پیوسته ضربان قلب (سرعت ملایم و یکنواخت) --- */
 @keyframes ecg-continuous-loop {
-  0% {
-    transform: translate3d(0, 0, 0);
-  }
-  100% {
-    transform: translate3d(-50%, 0, 0);
-  }
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
 }
-
-/* سرعت ملایم و یکنواخت برای هر ۳ خط با آفست زمانی متفاوت جهت تنوع ضربان */
 .ecg-track-1 {
   animation: ecg-continuous-loop 24s linear infinite;
   filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.7));
   will-change: transform;
 }
-
 .ecg-track-2 {
   animation: ecg-continuous-loop 24s linear infinite;
   animation-delay: -8s;
   filter: drop-shadow(0 0 6px rgba(236, 72, 153, 0.65));
   will-change: transform;
 }
-
 .ecg-track-3 {
   animation: ecg-continuous-loop 24s linear infinite;
   animation-delay: -16s;
@@ -113,13 +373,11 @@ p {
   will-change: transform;
 }
 
-/* ماسک نوری: محو کردن مرکز کادر (پشت متن هیرو) و شفافیت کامل در دو طرف */
 .ecg-center-faded-mask {
   mask-image: radial-gradient(ellipse 60% 50% at 50% 48%, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.35) 45%, rgba(0, 0, 0, 1) 85%);
   -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 48%, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.35) 45%, rgba(0, 0, 0, 1) 85%);
 }
 
-/* پرینت فیش */
 @media print {
   header, footer, nav, button, aside, .no-print {
     display: none !important;
@@ -130,18 +388,5 @@ p {
     font-size: 13pt;
     padding: 0 !important;
     margin: 0 !important;
-  }
-  .print-receipt-card {
-    box-shadow: none !important;
-    border: 1.5px solid #0f172a !important;
-    border-radius: 10px !important;
-    padding: 24px !important;
-    width: 100% !important;
-    max-width: 580px !important;
-    margin: 15px auto !important;
-    background: #ffffff !important;
-  }
-  .print-receipt-card * {
-    color: #000000 !important;
   }
 }
