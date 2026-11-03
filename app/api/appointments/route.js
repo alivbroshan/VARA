@@ -30,6 +30,14 @@ function getDb() {
       status TEXT DEFAULT 'confirmed',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    DROP INDEX IF EXISTS unique_active_appointment;
+    DROP INDEX IF EXISTS idx_active_slots;
+    DROP INDEX IF EXISTS idx_doctor_datetime;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_active_slots
+    ON appointments (doctor_id, date, time)
+    WHERE LOWER(status) NOT LIKE '%cancel%';
   `);
 
   const count = db.prepare("SELECT COUNT(*) as c FROM doctors").get();
@@ -58,6 +66,12 @@ export async function GET(request) {
   const date = searchParams.get("date");
   const phone = searchParams.get("phone");
 
+  const noCacheHeaders = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    Pragma: "no-cache",
+    Expires: "0",
+  };
+
   const db = getDb();
   try {
     if (phone) {
@@ -69,17 +83,25 @@ export async function GET(request) {
         ORDER BY a.date DESC, a.time ASC
       `).all(phone);
 
-      return NextResponse.json({ appointments });
+      return NextResponse.json({ appointments }, { headers: noCacheHeaders });
     }
 
     if (doctorId && date) {
+      // تمیزکاری تاریخ ارسالی جهت جلوگیری از تفاوت فاصله یا کاراکتر مخفی
+      const cleanDate = date.trim();
       const appointments = db.prepare(`
         SELECT time FROM appointments
-        WHERE doctor_id = ? AND date = ? AND status != 'cancelled'
-      `).all(Number(doctorId), date);
+        WHERE doctor_id = ? 
+          AND date = ? 
+          AND LOWER(TRIM(status)) NOT LIKE '%cancel%'
+      `).all(Number(doctorId), cleanDate);
 
       const bookedSlots = appointments.map((a) => a.time);
-      return NextResponse.json({ bookedSlots });
+
+      return NextResponse.json(
+        { bookedSlots, bookedTimes: bookedSlots },
+        { headers: noCacheHeaders }
+      );
     }
 
     const allAppointments = db.prepare(`
@@ -89,9 +111,9 @@ export async function GET(request) {
       ORDER BY a.date DESC, a.time ASC
     `).all();
 
-    return NextResponse.json({ appointments: allAppointments });
+    return NextResponse.json({ appointments: allAppointments }, { headers: noCacheHeaders });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500, headers: noCacheHeaders });
   } finally {
     db.close();
   }
@@ -107,37 +129,32 @@ export async function POST(request) {
     }
 
     const docIdNum = Number(doctorId);
-
-    const existing = db.prepare(`
-      SELECT id FROM appointments
-      WHERE doctor_id = ? AND date = ? AND time = ? AND status != 'cancelled'
-    `).get(docIdNum, date, time);
-
-    if (existing) {
-      return NextResponse.json({ error: "این زمان قبلاً توسط بیمار دیگری رزرو شده است." }, { status: 409 });
-    }
-
+    const cleanDate = date.trim();
+    const cleanTime = time.trim();
     const trackingCode = generateTrackingCode();
 
-    const stmt = db.prepare(`
-      INSERT INTO appointments (doctor_id, patient_name, patient_phone, date, time, tracking_code, status)
-      VALUES (?, ?, ?, ?, ?, ?, 'confirmed')
-    `);
-    // دریافت نام پزشک جهت نمایش در اعلان
-    let docName = "پزشک کلینیک";
-    try {
-      const doc = db.prepare("SELECT name FROM doctors WHERE id = ?").get(doctorId);
-      if (doc) docName = doc.name;
+    const runTransaction = db.transaction(() => {
+      const existing = db.prepare(`
+        SELECT id FROM appointments
+        WHERE doctor_id = ? 
+          AND date = ? 
+          AND time = ? 
+          AND LOWER(TRIM(status)) NOT LIKE '%cancel%'
+      `).get(docIdNum, cleanDate, cleanTime);
 
-      // ثبت اعلان جدید برای ادمین
-      db.prepare(
-        "INSERT INTO notifications (tracking_code, patient_name, doctor_name, date, time, is_read) VALUES (?, ?, ?, ?, ?, 0)"
-      ).run(trackingCode, patientName.trim(), docName, date, time);
-    } catch (notifErr) {
-      console.error("Notification trigger error:", notifErr);
-    }
+      if (existing) {
+        throw new Error("SLOT_TAKEN");
+      }
 
-    const result = stmt.run(docIdNum, patientName, patientPhone, date, time, trackingCode);
+      const stmt = db.prepare(`
+        INSERT INTO appointments (doctor_id, patient_name, patient_phone, date, time, tracking_code, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'confirmed')
+      `);
+
+      return stmt.run(docIdNum, patientName.trim(), patientPhone.trim(), cleanDate, cleanTime, trackingCode);
+    });
+
+    const result = runTransaction();
 
     return NextResponse.json({
       success: true,
@@ -147,12 +164,15 @@ export async function POST(request) {
         doctorId: docIdNum,
         patientName,
         patientPhone,
-        date,
-        time,
-        status: "confirmed"
-      }
+        date: cleanDate,
+        time: cleanTime,
+        status: "confirmed",
+      },
     });
   } catch (error) {
+    if (error.message === "SLOT_TAKEN" || (error.message && error.message.includes("UNIQUE constraint failed"))) {
+      return NextResponse.json({ error: "این زمان قبلاً توسط بیمار دیگری رزرو شده است." }, { status: 409 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   } finally {
     db.close();
@@ -162,25 +182,35 @@ export async function POST(request) {
 export async function PATCH(request) {
   const db = getDb();
   try {
-    const { trackingCode, status } = await request.json();
+    const { trackingCode, id, status } = await request.json();
 
-    if (!trackingCode || !status) {
-      return NextResponse.json({ error: "کد رهگیری و وضعیت الزامی است." }, { status: 400 });
+    const newStatus = status ? status.trim().toLowerCase() : "cancelled";
+
+    let res;
+    if (trackingCode) {
+      res = db.prepare(`
+        UPDATE appointments
+        SET status = ?
+        WHERE tracking_code = ?
+      `).run(newStatus, trackingCode.trim().toUpperCase());
+    } else if (id) {
+      res = db.prepare(`
+        UPDATE appointments
+        SET status = ?
+        WHERE id = ?
+      `).run(newStatus, Number(id));
+    } else {
+      return NextResponse.json({ error: "کد رهگیری یا شناسه نوبت الزامی است." }, { status: 400 });
     }
-
-    const stmt = db.prepare(`
-      UPDATE appointments
-      SET status = ?
-      WHERE tracking_code = ?
-    `);
-
-    const res = stmt.run(status, trackingCode);
 
     if (res.changes === 0) {
-      return NextResponse.json({ error: "نوبتی با این کد رهگیری پیدا نشد." }, { status: 404 });
+      return NextResponse.json({ error: "نوبتی با این مشخصات پیدا نشد." }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, message: "وضعیت نوبت به‌روزرسانی شد." });
+    return NextResponse.json({
+      success: true,
+      message: "وضعیت نوبت به‌روزرسانی شد و ساعت با موفقیت آزاد گردید.",
+    });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   } finally {

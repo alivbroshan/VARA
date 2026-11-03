@@ -102,7 +102,6 @@ export default function PatientPortal() {
   const [actionMessage, setActionMessage] = useState(null);
   const [activeTab, setActiveTab] = useState("upcoming");
 
-  // کنترل دقیق تم لایت و دارک
   const [isDark, setIsDark] = useState(true);
 
   const [ratingModalApp, setRatingModalApp] = useState(null);
@@ -174,7 +173,9 @@ export default function PatientPortal() {
     if (!phone) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/appointments?phone=${encodeURIComponent(phone)}`);
+      const res = await fetch(`/api/appointments?phone=${encodeURIComponent(phone)}&t=${Date.now()}`, {
+        cache: "no-store",
+      });
       const data = await res.json();
       if (res.ok) {
         setAppointments(data.appointments || []);
@@ -260,7 +261,12 @@ export default function PatientPortal() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "خطا در لغو نوبت");
 
-      setActionMessage({ type: "success", text: `نوبت با کد رهگیری ${trackingCode} لغو شد.` });
+      // ۱. ارسال سیگنال فوری به صفحات باز جهت آزادسازی آنی تایم
+      localStorage.setItem("varadoc_last_cancellation", Date.now().toString());
+      window.dispatchEvent(new Event("storage"));
+
+      // ۲. به‌روزرسانی نوبت در پنل جاری
+      setActionMessage({ type: "success", text: `نوبت با کد رهگیری ${trackingCode} لغو شد و ساعت آن مجدداً آزاد گردید.` });
       setAppointments((prev) =>
         prev.map((app) => (app.tracking_code === trackingCode ? { ...app, status: "cancelled_by_patient" } : app))
       );
@@ -463,7 +469,6 @@ export default function PatientPortal() {
             <h2 className="text-base font-black text-white mb-2">اطلاعات هویتی و سلامت بیمار</h2>
             <p className="text-xs text-zinc-400 mb-6">این اطلاعات هنگام ثبت نوبت و صدور فیش‌های پذیرش به شکل خودکار استفاده می‌شوند.</p>
 
-            {/* کادر تصویر پروفایل: در دارک تیره، در لایت کاملاً سفید */}
             <div className={`portal-avatar-box mb-8 p-4 rounded-2xl border shadow-sm flex items-center gap-4 ${
               isDark ? "border-zinc-800 bg-zinc-950/60" : "border-zinc-200 bg-white"
             }`}>

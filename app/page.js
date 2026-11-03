@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import AuthModal from "./AuthModal";
 
@@ -285,20 +285,15 @@ export default function Home() {
   const [isDark, setIsDark] = useState(true);
 
   const [doctors, setDoctors] = useState([]);
-  // شروع با مقدار خالی برای عدم اجبار به انتخاب یک پزشک خاص
   const [selectedDoctorId, setSelectedDoctorId] = useState("");
 
   const todayShamsi = useMemo(() => getTodayShamsi(), []);
   
-  // تاریخ هیرو
   const [shYear, setShYear] = useState(todayShamsi[0]);
   const [shMonth, setShMonth] = useState(todayShamsi[1]);
   const [shDay, setShDay] = useState(todayShamsi[2]);
 
-  // تاریخ‌های مستقل هر پزشک
   const [doctorDates, setDoctorDates] = useState({});
-
-  // جدول نوبت‌های پرشده
   const [bookedSlotsMap, setBookedSlotsMap] = useState({});
 
   const [selectedSlot, setSelectedSlot] = useState("");
@@ -362,7 +357,7 @@ export default function Home() {
   }, []);
 
   const fetchDoctorsList = () => {
-    fetch("/api/doctors")
+    fetch("/api/doctors", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
@@ -374,7 +369,6 @@ export default function Home() {
           }));
           setDoctors(enhanced);
 
-          // مقداردهی اولیه تاریخ تمام پزشکان بر اساس تاریخ امروز
           const initialDates = {};
           enhanced.forEach((d) => {
             initialDates[d.id] = { day: todayShamsi[2], month: todayShamsi[1], year: todayShamsi[0] };
@@ -389,7 +383,6 @@ export default function Home() {
     fetchDoctorsList();
   }, []);
 
-  // همگام‌سازی تاریخ سرچ هیرو روی تاریخ پزشکان در هنگام تغییر فیلترهای هیرو
   const syncHeroDateToDoctors = (day, month, year) => {
     setDoctorDates((prev) => {
       const updated = { ...prev };
@@ -400,40 +393,69 @@ export default function Home() {
     });
   };
 
-  const getDoctorIsoDate = (docId) => {
+  const getDoctorIsoDate = useCallback((docId) => {
     const dDate = doctorDates[docId] || { day: shDay, month: shMonth, year: shYear };
     const [gy, gm, gd] = jalaliToGregorian(Number(dDate.year), Number(dDate.month), Number(dDate.day));
     return `${gy}-${String(gm).padStart(2, "0")}-${String(gd).padStart(2, "0")}`;
-  };
+  }, [doctorDates, shDay, shMonth, shYear]);
 
-  // واکشی نوبت‌های پر شده برای تمام پزشکان متناسب با تاریخ اختصاصی هر کارت
-  useEffect(() => {
+  // بازخوانی زنده و مستقیم از سرور بدون اتکا به مقادیر کش شده
+  const refreshSlots = useCallback(() => {
     if (doctors.length === 0) return;
 
     doctors.forEach((doc) => {
       const docDateIso = getDoctorIsoDate(doc.id);
-      fetch(`/api/appointments?doctorId=${doc.id}&date=${docDateIso}`)
+      fetch(`/api/appointments?doctorId=${doc.id}&date=${docDateIso}&t=${Date.now()}`, {
+        cache: "no-store",
+      })
         .then((res) => res.json())
         .then((data) => {
+          const rawList = data.bookedSlots || data.bookedTimes || [];
           setBookedSlotsMap((prev) => ({
             ...prev,
-            [doc.id]: Array.isArray(data.bookedSlots) ? data.bookedSlots : [],
+            [doc.id]: Array.isArray(rawList) ? rawList : [],
           }));
         })
         .catch(() => {});
     });
-  }, [doctors, doctorDates]);
+  }, [doctors, getDoctorIsoDate]);
 
-  // فیلتر جستجوی ترکیبی: همزمان بر اساس کادر پزشک انتخابی و کادر متنی
+  useEffect(() => {
+    refreshSlots();
+  }, [refreshSlots]);
+
+  // واکنش بلافاصله به تغییرات storage و لغو نوبت در تب دیگر
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (!e.key || e.key === "varadoc_last_cancellation") {
+        refreshSlots();
+      }
+    };
+
+    const handleFocus = () => refreshSlots();
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("focus", handleFocus);
+
+    // بررسی دوره‌ای سریع هر ۲ ثانیه برای اطمینان صد درصدی
+    const timer = setInterval(() => {
+      refreshSlots();
+    }, 2000);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("focus", handleFocus);
+      clearInterval(timer);
+    };
+  }, [refreshSlots]);
+
   const filteredDoctors = useMemo(() => {
     let result = doctors;
 
-    // ۱. اگر در کادر دراپ‌داون پزشک خاصی انتخاب شده باشد
     if (selectedDoctorId) {
       result = result.filter((d) => d.id === Number(selectedDoctorId));
     }
 
-    // ۲. فیلتر کردن بر اساس متن سرچ (نام پزشک، تخصص یا روز کاری)
     const term = searchTerm.trim().toLowerCase();
     if (term) {
       result = result.filter((d) => {
@@ -457,11 +479,8 @@ export default function Home() {
     }
   };
 
-  // اعمال سرچ و هدایت مستقیم کاربر به تقویم نوبت‌ها با تاریخ انتخاب‌شده
   const handleSearchSubmit = (e) => {
     if (e) e.preventDefault();
-    
-    // تاریخ انتخابی هیرو روی تمام پزشکان اعمال می‌شود
     syncHeroDateToDoctors(shDay, shMonth, shYear);
 
     const element = document.getElementById("doctors-list");
@@ -518,10 +537,13 @@ export default function Home() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "خطا در ثبت نوبت");
+      if (!res.ok) {
+        refreshSlots();
+        throw new Error(data.error || "خطا در ثبت نوبت");
+      }
 
       setReceiptData({
-        trackingCode: data.appointment?.trackingCode || "VARA-" + Math.floor(100000 + Math.random() * 900000),
+        trackingCode: data.appointment?.trackingCode || data.trackingCode || "VARA-" + Math.floor(100000 + Math.random() * 900000),
         doctorName: doctorToBook.name,
         specialty: doctorToBook.specialty,
         patientName: currentUser.name || patientName,
@@ -531,11 +553,8 @@ export default function Home() {
         address: doctorToBook.address,
       });
 
-      // بلافاصله ساعت رزرو شده خط می‌خورد
-      setBookedSlotsMap((prev) => ({
-        ...prev,
-        [doctorToBook.id]: [...(prev[doctorToBook.id] || []), selectedSlot],
-      }));
+      // استعلام زنده و دقیق به جای اضافه کردن محلی
+      refreshSlots();
 
       setSelectedSlot("");
       setActiveDoctorForBooking(null);
@@ -627,7 +646,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* بخش هیرو با قابلیت سرچ ترکیبی و خالی بودن پزشک */}
+      {/* بخش هیرو */}
       <section className="relative pt-16 pb-16 px-6 z-10 overflow-hidden">
         <AnimatedEcgBackground />
 
@@ -650,7 +669,6 @@ export default function Home() {
 
           <SpotlightCard className="mt-10 p-5 shadow-2xl text-right">
             <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-              {/* کادر ۱: جستجوی متنی نام پزشک یا تخصص */}
               <div className="md:col-span-4 p-1">
                 <label className="block text-[11px] font-medium text-zinc-400 mb-1.5">نام پزشک یا تخصص</label>
                 <div className="flex items-center gap-2 border border-zinc-800 rounded-2xl p-1 bg-zinc-950/70 h-[42px] px-3.5 focus-within:border-rose-500/80 transition">
@@ -671,7 +689,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* کادر ۲: انتخاب پزشک معالج (با گزینه خالی «همه پزشکان») */}
               <div className="md:col-span-4 p-1">
                 <label className="block text-[11px] font-medium text-zinc-400 mb-1.5">انتخاب پزشک معالج</label>
                 <div className="border border-zinc-800 rounded-2xl p-1 bg-zinc-950/70 h-[42px] flex items-center">
@@ -690,7 +707,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* کادر ۳: تاریخ مراجعه */}
               <div className="md:col-span-4 p-1">
                 <label className="block text-[11px] font-medium text-zinc-400 mb-1.5">تاریخ مراجعه</label>
                 <div className="grid grid-cols-3 gap-1.5 border border-zinc-800 rounded-2xl p-1 bg-zinc-950/70 h-[42px]">
@@ -796,7 +812,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* لیست پزشکان با نوبت‌های همواره خط‌خورده */}
+      {/* لیست پزشکان */}
       <section id="doctors-list" className="mx-auto max-w-7xl px-6 py-10 relative z-10">
         <div className="mb-6 flex items-center justify-between">
           <div>
@@ -855,7 +871,6 @@ export default function Home() {
               const docIso = getDoctorIsoDate(doctor.id);
               const isThisDoctorHoliday = isHolidayDay(docIso);
 
-              // ساعت‌های رزرو شده پزشک همواره خط می‌خورند
               const currentBookedSlots = bookedSlotsMap[doctor.id] || [];
 
               return (
@@ -941,7 +956,6 @@ export default function Home() {
                         ) : (
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {doctorSlots.slice(0, 8).map((slot) => {
-                              // خط خوردن دائمی بدون نیاز به اشاره‌گر ماوس
                               const isBooked = currentBookedSlots.includes(slot);
                               const isSelected = isDoctorActive && selectedSlot === slot;
 
