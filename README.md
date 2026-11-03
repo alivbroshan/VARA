@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# 🏥 وراداک (Varadoc Health)
+سامانه هوشمند و یکپارچه نوبت‌دهی آنلاین و پرونده الکترونیک درمانگاه
 
-## Getting Started
+وراداک یک وب‌اپلیکیشن فول‌استک و مدرن بر پایه Next.js و پایگاه‌داده محلی SQLite است که با تمرکز بر سرعت بالا، رابط کاربری شیشه‌ای و نئونی (Glassmorphism & Neon) و انطباق کامل با تقویم شمسی برای درمانگاه‌ها و کلینیک‌های تخصصی توسعه داده شده است.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## ✨ ویژگی‌های کلیدی سامانه
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- 📅 تقویم کاملاً شمسی و بومی:
+  - پیاده‌سازی مستقل الگوریتم تبدیل تقویم جلالی بدون وابستگی‌های سنگین خارجی.
+  - اعمال خودکار تعطیلی روزهای پنج‌شنبه و جمعه کلینیک و ممانعت از رزرو نوبت در روزهای تعطیل.
+  - هماهنگی خودکار تاریخ انتخابی هیرو با کارت هر پزشک.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+- ⚡️ سیستم رزرو آنلاین و نوبت‌های خط‌خورده:
+  - به‌روزرسانی مداوم نوبت‌های پرشده و نمایش آنها با خط‌خوردگی (line-through) و غیرفعال‌سازی لحظه‌ای بدون نیاز به هاور ماوس.
+  - صدور آنی برگه رسمی پذیرش دارای کد رهگیری یکتا (مانند VARA-849201) همراه با قابلیت چاپ (window.print).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- 🔔 سیستم اعلان زنده برای مدیریت و میز پذیرش (Admin Notifications):
+  - زنگوله هوشمند دارای نشانگر نئونی پالس‌دار برای اعلام نوبت‌های جدید.
+  - نمایش پنجره شناور (Toast Notification) بالای صفحه ادمین به محض ثبت نوبت توسط بیمار.
+  - لیست بازشونده با قابلیت علامت‌گذاری به عنوان «خوانده‌شده».
 
-## Learn More
+- 👤 پرتال پرونده سلامت بیمار:
+  - تفکیک نوبت‌ها به دو تب «نوبت‌های پیش‌رو و فعال» و «آرشیو و سوابق گذشته».
+  - امکان لغو نوبت توسط بیمار با به‌روزرسانی خودکار وضعیت نوبت.
+  - فرم جامع پرونده پزشکی (کد ملی، گروه خونی، شماره تماس اضطراری و پوشش بیمه‌ای).
+  - انتخاب و بارگذاری تصویر پروفایل بیمار (با استایل هماهنگ در هر دو تم لایت و دارک).
+  - ثبت نظر و امتیاز ستاره‌ای برای ویزیت‌های انجام‌شده.
 
-To learn more about Next.js, take a look at the following resources:
+- 🛠 میز پذیرش و پنل مدیریت ادمین:
+  - فیلتر هوشمند نوبت‌ها بر اساس وضعیت (در انتظار پذیرش، پذیرش‌شده، ویزیت شد، غیبت بیمار، لغو کلینیک/بیمار).
+  - منوی کشویی سفارشی (Custom Dropdown) برای تغییر درجا و سریع وضعیت هر نوبت.
+  - فرم افزودن پزشک جدید به کلینیک با تعیین تخصص و ساعات شیفت کاری.
+  - قابلیت ویرایش ساعت و شیفت یا حذف پزشک از سیستم.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- 🎨 هویت بصری و رابط کاربری مدرن:
+  - انیمیشن پس‌زمینه نوار قلب (ECG SVG Wave) متحرک و بی‌نهایت.
+  - کارت‌های تعاملی دارای نورافکن هوشمند موس (Spotlight Effect).
+  - سوییچر تم دوتایی (دارک نئونی و لایت تمیز) همراه با ذخیره‌سازی وضعیت تم در localStorage.
+  - استفاده از فونت استاندارد وزیر (Vazirmatn) برای ارقام و حروف فارسی.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🛠 تکنولوژی‌ها و ابزارها
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- فریم‌ورک فرانت‌اند و بک‌اند: Next.js (App Router)
+- کتابخانه رابط کاربری: React
+- استایل‌دهی: Tailwind CSS
+- پایگاه‌داده: SQLite به همراه درایور پرسرعت better-sqlite3 (با پشتیبانی از حالت WAL)
+- آیکون‌ها و انیمیشن‌ها: آیکون‌های برداری بهینه‌شده SVG و انیمیشن‌های اختصاصی CSS
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 📂 ساختار فایل‌های پروژه
+
+```text
+├── app/
+│   ├── admin/
+│   │   └── page.js              # داشبورد میز پذیرش، مدیریت پزشکان و نوتیفیکیشن‌ها
+│   ├── api/
+│   │   ├── appointments/
+│   │   │   └── route.js         # مدیریت رزرو نوبت، مایگریشن خودکار و استعلام اسلات‌ها
+│   │   ├── doctors/
+│   │   │   └── route.js         # عملیات CRUD پزشکان کلینیک
+│   │   └── notifications/
+│   │       └── route.js         # واکشی و علامت‌گذاری اعلان‌های زنده ادمین
+│   ├── portal/
+│   │   └── page.js              # پرتال بیمار، ویرایش پرونده سلامت و تاریخچه نوبت‌ها
+│   ├── AuthModal.js             # پاپ‌آپ لاگین و اعتبارسنجی با شماره موبایل
+│   ├── layout.js                # ساختار اصلی HTML، متادیتا و بارگذاری فونت وزیر
+│   └── page.js                  # صفحه اصلی سایت (هیرو، سرچ پیشرفته و لیست پزشکان)
+├── lib/
+│   └── db.js                    # پیکربندی اتصال SQLite، جداول و پزشکان پیش‌فرض
+├── public/                      # تصاویر، فونت‌ها و فایل‌های ایستا
+├── clinic.db                    # پایگاه‌داده محلی SQLite
+├── package.json
+└── README.md
