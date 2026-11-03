@@ -31,6 +31,18 @@ function getDb() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    -- جدول اعلان‌ها برای پنل ادمین
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tracking_code TEXT,
+      patient_name TEXT,
+      doctor_name TEXT,
+      date TEXT,
+      time TEXT,
+      is_read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     DROP INDEX IF EXISTS unique_active_appointment;
     DROP INDEX IF EXISTS idx_active_slots;
     DROP INDEX IF EXISTS idx_doctor_datetime;
@@ -87,7 +99,6 @@ export async function GET(request) {
     }
 
     if (doctorId && date) {
-      // تمیزکاری تاریخ ارسالی جهت جلوگیری از تفاوت فاصله یا کاراکتر مخفی
       const cleanDate = date.trim();
       const appointments = db.prepare(`
         SELECT time FROM appointments
@@ -146,6 +157,17 @@ export async function POST(request) {
         throw new Error("SLOT_TAKEN");
       }
 
+      // ۱. دریافت نام پزشک جهت نمایش دقیق در اعلان ادمین
+      let docName = "پزشک کلینیک";
+      const doc = db.prepare("SELECT name FROM doctors WHERE id = ?").get(docIdNum);
+      if (doc && doc.name) docName = doc.name;
+
+      // ۲. ثبت اعلان جدید برای پنل ادمین
+      db.prepare(
+        "INSERT INTO notifications (tracking_code, patient_name, doctor_name, date, time, is_read) VALUES (?, ?, ?, ?, ?, 0)"
+      ).run(trackingCode, patientName.trim(), docName, cleanDate, cleanTime);
+
+      // ۳. ثبت نوبت بیمار
       const stmt = db.prepare(`
         INSERT INTO appointments (doctor_id, patient_name, patient_phone, date, time, tracking_code, status)
         VALUES (?, ?, ?, ?, ?, ?, 'confirmed')
